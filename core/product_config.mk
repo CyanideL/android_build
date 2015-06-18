@@ -181,7 +181,7 @@ include $(BUILD_SYSTEM)/device.mk
 
 # A CM build needs only the CM product makefiles.
 ifneq ($(CYANIDE_BUILD),)
-  all_product_configs := $(shell ls device/*/$(CYANIDE_BUILD)/cyanide.mk)
+  all_product_configs := $(shell find device -path "*/$(CYANIDE_BUILD)/cyanide.mk")
 else
   ifneq ($(strip $(TARGET_BUILD_APPS)),)
   # An unbundled app build needs only the core product makefiles.
