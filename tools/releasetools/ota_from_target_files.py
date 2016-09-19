@@ -83,6 +83,10 @@ Usage:  ota_from_target_files [flags] input_target_files output_ota_package
   -a  (--aslr_mode)  <on|off>
       Specify whether to turn on ASLR for the package (on by default).
 
+  --backup <boolean>
+      Enable or disable the execution of backuptool.sh.
+      Disabled by default.
+
   -2  (--two_step)
       Generate a 'two-step' OTA package, where recovery is updated
       first, so that any changes made to the system partition are done
@@ -113,6 +117,10 @@ Usage:  ota_from_target_files [flags] input_target_files output_ota_package
       Generate a log file that shows the differences in the source and target
       builds for an incremental package. This option is only meaningful when
       -i is specified.
+
+  --override_device <device>
+      Override device-specific asserts. Can be a comma-separated list.
+
 """
 
 import sys
@@ -146,6 +154,7 @@ OPTIONS.aslr_mode = True
 OPTIONS.worker_threads = multiprocessing.cpu_count() // 2
 if OPTIONS.worker_threads == 0:
   OPTIONS.worker_threads = 1
+OPTIONS.backuptool = False
 OPTIONS.two_step = False
 OPTIONS.no_signing = False
 OPTIONS.block_based = False
@@ -160,6 +169,7 @@ OPTIONS.cache_size = None
 OPTIONS.stash_threshold = 0.8
 OPTIONS.gen_verify = False
 OPTIONS.log_diff = None
+OPTIONS.override_device = 'auto'
 
 def MostPopularKey(d, default):
   """Given a dict, return the key corresponding to the largest
@@ -440,7 +450,10 @@ def SignOutput(temp_zip_name, output_zip_name):
 def AppendAssertions(script, info_dict, oem_dict=None):
   oem_props = info_dict.get("oem_fingerprint_properties")
   if oem_props is None or len(oem_props) == 0:
-    device = GetBuildProp("ro.product.device", info_dict)
+    if OPTIONS.override_device == "auto":
+      device = GetBuildProp("ro.product.device", info_dict)
+    else:
+      device = OPTIONS.override_device
     script.AssertDevice(device)
   else:
     if oem_dict is None:
@@ -557,14 +570,9 @@ def WriteFullOTAPackage(input_zip, output_zip):
       info_dict=OPTIONS.info_dict)
 
   has_recovery_patch = HasRecoveryPatch(input_zip)
-  block_based = OPTIONS.block_based and has_recovery_patch
+  block_based = OPTIONS.block_based
 
   metadata["ota-type"] = "BLOCK" if block_based else "FILE"
-
-  if not OPTIONS.omit_prereq:
-    ts = GetBuildProp("ro.build.date.utc", OPTIONS.info_dict)
-    ts_text = GetBuildProp("ro.build.date", OPTIONS.info_dict)
-    script.AssertOlderBuild(ts, ts_text)
 
   AppendAssertions(script, OPTIONS.info_dict, oem_dict)
   device_specific.FullOTA_Assertions()
@@ -616,12 +624,54 @@ else if get_stage("%(bcb_dev)s") == "3/3" then
   script.AppendExtra("ifelse(is_mounted(\"/system\"), unmount(\"/system\"));")
   device_specific.FullOTA_InstallBegin()
 
+  if OPTIONS.backuptool:
+    if block_based:
+      common.ZipWriteStr(output_zip, "system/bin/backuptool.sh",
+                     ""+input_zip.read("SYSTEM/bin/backuptool.sh"))
+      common.ZipWriteStr(output_zip, "system/bin/backuptool.functions",
+                     ""+input_zip.read("SYSTEM/bin/backuptool.functions"))
+    script.Mount("/system")
+    script.RunBackup("backup")
+    script.Unmount("/system")
+
   system_progress = 0.75
 
   if OPTIONS.wipe_user_data:
     system_progress -= 0.1
   if HasVendorPartition(input_zip):
     system_progress -= 0.1
+
+  script.Print("  We are flashing and infecting your system, please be patient.....  ");
+  script.Print("                                        "); 
+  script.Print("                                        "); 
+  script.Print("      _____               _    __       ");
+  script.Print("     / ___/_ _____ ____  (_)__/ /__     ");
+  script.Print("    / /__/ // / _ `/ _ \/ / _  / -_)    ");
+  script.Print("    \___/\_, /\_,_/_//_/_/\_,_/\__/     ");
+  script.Print("        /___/                           ");
+  script.Print("      ___           __         _    __  ");
+  script.Print("     / _ | ___  ___/ /______  (_)__/ /  ");
+  script.Print("    / __ |/ _ \/ _  / __/ _ \/ / _  /   ");
+  script.Print("   /_/ |_/_//_/\_,_/_/  \___/_/\_,_/    ");
+  script.Print("           __  __                       ");                      
+  script.Print("           \ \/ / __ __ __              ");                      
+  script.Print("            \  / _ \/ // /              ");            
+  script.Print("            /_/\___/\_,_/               ");
+  script.Print("                                        ");
+  script.Print("          __ __                         ");
+  script.Print("         / // /__ __  _____             ");
+  script.Print("        / _  / _ `/ |/ / -_)            ");
+  script.Print("       /_//_/\_,_/|___/\__/             "); 
+  script.Print("                                        ");
+  script.Print("           ___                          ");
+  script.Print("          / _ )___ ___ ___              ");
+  script.Print("         / _  / -_) -_) _ \             ");
+  script.Print("        /____/\__/\__/_//_/             ");
+  script.Print("                                        ");
+  script.Print("   ___       _                      __  ");
+  script.Print("  / _ \___  (_)__ ___  ___  ___ ___/ /  ");
+  script.Print(" / ___/ _ \/ (_-</ _ \/ _ \/ -_) _  /   ");
+  script.Print("/_/   \___/_/___/\___/_//_/\__/\_,_/    ");
 
   # Place a copy of file_contexts.bin into the OTA package which will be used
   # by the recovery program.
@@ -660,9 +710,6 @@ else if get_stage("%(bcb_dev)s") == "3/3" then
       common.ZipWriteStr(output_zip, "recovery/" + fn, data)
       system_items.Get("system/" + fn)
 
-    common.MakeRecoveryPatch(OPTIONS.input_tmp, output_sink,
-                             recovery_img, boot_img)
-
     system_items.GetMetadata(input_zip)
     system_items.Get("system").SetPermissions(script)
 
@@ -689,8 +736,21 @@ else if get_stage("%(bcb_dev)s") == "3/3" then
   common.CheckSize(boot_img.data, "boot.img", OPTIONS.info_dict)
   common.ZipWriteStr(output_zip, "boot.img", boot_img.data)
 
+  if OPTIONS.backuptool:
+    script.ShowProgress(0.2, 10)
+    if block_based:
+      script.Mount("/system")
+    script.RunBackup("restore")
+    if block_based:
+      script.Unmount("/system")
+
   script.ShowProgress(0.05, 5)
   script.WriteRawImage("/boot", "boot.img")
+  
+  script.Print("Be patient, gotta get that root...")
+  common.ZipWriteStr(output_zip, "supersu/supersu.zip",
+                 ""+input_zip.read("SYSTEM/addon.d/UPDATE-SuperSU.zip"))
+  script.FlashSuperSU()
 
   script.ShowProgress(0.2, 10)
   device_specific.FullOTA_InstallEnd()
@@ -698,7 +758,13 @@ else if get_stage("%(bcb_dev)s") == "3/3" then
   if OPTIONS.extra_script is not None:
     script.AppendExtra(OPTIONS.extra_script)
 
+  # SuperSU leave /system unmounted while we need it mounted here to avoid
+  # a warning from non-Multirom TWRP
+  if block_based:
+    script.Mount("/system")
+
   script.UnmountAll()
+  script.Print("Results: INFECTED!!!") 
 
   if OPTIONS.wipe_user_data:
     script.ShowProgress(0.1, 10)
@@ -721,6 +787,9 @@ endif;
   script.AddToZip(input_zip, output_zip, input_path=OPTIONS.updater_binary)
   metadata["ota-required-cache"] = str(script.required_cache)
   WriteMetadata(metadata, output_zip)
+
+  common.ZipWriteStr(output_zip, "system/build.prop",
+                     ""+input_zip.read("SYSTEM/build.prop"))
 
 
 def WritePolicyConfig(file_name, output_zip):
@@ -1879,6 +1948,8 @@ def main(argv):
       else:
         raise ValueError("Cannot parse value %r for option %r - only "
                          "integers are allowed." % (a, o))
+    elif o in ("--backup"):
+      OPTIONS.backuptool = bool(a.lower() == 'true')
     elif o in ("-2", "--two_step"):
       OPTIONS.two_step = True
     elif o == "--no_signing":
@@ -1901,6 +1972,8 @@ def main(argv):
       OPTIONS.gen_verify = True
     elif o == "--log_diff":
       OPTIONS.log_diff = a
+    elif o in ("--override_device"):
+      OPTIONS.override_device = a
     else:
       return False
     return True
@@ -1919,6 +1992,7 @@ def main(argv):
                                  "extra_script=",
                                  "worker_threads=",
                                  "aslr_mode=",
+                                 "backup=",
                                  "two_step",
                                  "no_signing",
                                  "block",
@@ -1930,6 +2004,7 @@ def main(argv):
                                  "stash_threshold=",
                                  "gen_verify",
                                  "log_diff=",
+                                 "override_device="
                              ], extra_option_handler=option_handler)
 
   if len(args) != 2:

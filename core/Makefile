@@ -34,7 +34,6 @@ unique_product_copy_files_destinations :=
 $(foreach cf,$(unique_product_copy_files_pairs), \
     $(eval _src := $(call word-colon,1,$(cf))) \
     $(eval _dest := $(call word-colon,2,$(cf))) \
-    $(call check-product-copy-files,$(cf)) \
     $(if $(filter $(unique_product_copy_files_destinations),$(_dest)), \
         $(info PRODUCT_COPY_FILES $(cf) ignored.), \
         $(eval _fulldest := $(call append-path,$(PRODUCT_OUT),$(_dest))) \
@@ -80,6 +79,8 @@ ADDITIONAL_DEFAULT_PROPERTIES += \
     $(call collapse-pairs, $(PRODUCT_DEFAULT_PROPERTY_OVERRIDES))
 ADDITIONAL_DEFAULT_PROPERTIES := $(call uniq-pairs-by-first-component, \
     $(ADDITIONAL_DEFAULT_PROPERTIES),=)
+
+.PHONY: $(INSTALLED_BUILD_PROP_TARGET)
 
 intermediate_system_build_prop := $(call intermediates-dir-for,ETC,system_build_prop)/build.prop
 
@@ -1080,7 +1081,7 @@ systemimage_intermediates := \
 BUILT_SYSTEMIMAGE := $(systemimage_intermediates)/system.img
 
 # Create symlink /system/vendor to /vendor if necessary.
-ifdef BOARD_VENDORIMAGE_FILE_SYSTEM_TYPE
+ifneq "$(or $(BOARD_VENDORIMAGE_FILE_SYSTEM_TYPE),$(BOARD_NEEDS_VENDORIMAGE_SYMLINK))" ""
 define create-system-vendor-symlink
 $(hide) if [ -d $(TARGET_OUT)/vendor ] && [ ! -h $(TARGET_OUT)/vendor ]; then \
   echo 'Non-symlink $(TARGET_OUT)/vendor detected!' 1>&2; \
@@ -1847,12 +1848,19 @@ $(INTERNAL_OTA_PACKAGE_TARGET): $(BUILT_TARGET_FILES_PACKAGE)
 	   --block \
 	   -p $(HOST_OUT) \
 	   -k $(KEY_CERT_PAIR) \
+       --backup=$(backuptool) \
 	   $(if $(OEM_OTA_CONFIG), -o $(OEM_OTA_CONFIG)) \
 	   $(BUILT_TARGET_FILES_PACKAGE) $@
 
-.PHONY: otapackage bacon
+CYANIDE_PACKAGE := $(PRODUCT_OUT)/$(CYANIDE_PACKAGE_NAME).zip
+
+.PHONY: otapackage cyanide
 otapackage: $(INTERNAL_OTA_PACKAGE_TARGET)
-bacon: otapackage
+cyanide: otapackage
+	$(hide) ln -f $(INTERNAL_OTA_PACKAGE_TARGET) $(CYANIDE_PACKAGE)
+	$(hide) $(MD5SUM) $(CYANIDE_PACKAGE) > $(CYANIDE_PACKAGE).md5sum
+	@echo "Package complete: $(CYANIDE_PACKAGE)"
+
 
 endif    # build_ota_package
 
