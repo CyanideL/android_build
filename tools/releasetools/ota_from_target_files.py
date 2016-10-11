@@ -654,37 +654,7 @@ else if get_stage("%(bcb_dev)s") == "3/3" then
   if HasVendorPartition(input_zip):
     system_progress -= 0.1
 
-  script.Print("  We are flashing and infecting your system, please be patient.....  ");
-  script.Print("                                        "); 
-  script.Print("                                        "); 
-  script.Print("      _____               _    __       ");
-  script.Print("     / ___/_ _____ ____  (_)__/ /__     ");
-  script.Print("    / /__/ // / _ `/ _ \/ / _  / -_)    ");
-  script.Print("    \___/\_, /\_,_/_//_/_/\_,_/\__/     ");
-  script.Print("        /___/                           ");
-  script.Print("      ___           __         _    __  ");
-  script.Print("     / _ | ___  ___/ /______  (_)__/ /  ");
-  script.Print("    / __ |/ _ \/ _  / __/ _ \/ / _  /   ");
-  script.Print("   /_/ |_/_//_/\_,_/_/  \___/_/\_,_/    ");
-  script.Print("           __  __                       ");                      
-  script.Print("           \ \/ / __ __ __              ");                      
-  script.Print("            \  / _ \/ // /              ");            
-  script.Print("            /_/\___/\_,_/               ");
-  script.Print("                                        ");
-  script.Print("          __ __                         ");
-  script.Print("         / // /__ __  _____             ");
-  script.Print("        / _  / _ `/ |/ / -_)            ");
-  script.Print("       /_//_/\_,_/|___/\__/             "); 
-  script.Print("                                        ");
-  script.Print("           ___                          ");
-  script.Print("          / _ )___ ___ ___              ");
-  script.Print("         / _  / -_) -_) _ \             ");
-  script.Print("        /____/\__/\__/_//_/             ");
-  script.Print("                                        ");
-  script.Print("   ___       _                      __  ");
-  script.Print("  / _ \___  (_)__ ___  ___  ___ ___/ /  ");
-  script.Print(" / ___/ _ \/ (_-</ _ \/ _ \/ -_) _  /   ");
-  script.Print("/_/   \___/_/___/\___/_//_/\__/\_,_/    ");
+  script.Print(" Commencing the infection process, please be patient.....  ");
 
   # Place a copy of file_contexts.bin into the OTA package which will be used
   # by the recovery program.
@@ -777,7 +747,37 @@ else if get_stage("%(bcb_dev)s") == "3/3" then
     script.Mount("/system")
 
   script.UnmountAll()
-  script.Print("Results: INFECTED!!!") 
+  script.Print("  We are flashing and infecting your system, please be patient.....  ");
+  script.Print("                                        "); 
+  script.Print("                                        "); 
+  script.Print("      _____               _    __       ");
+  script.Print("     / ___/_ _____ ____  (_)__/ /__     ");
+  script.Print("    / /__/ // / _ `/ _ \/ / _  / -_)    ");
+  script.Print("    \___/\_, /\_,_/_//_/_/\_,_/\__/     ");
+  script.Print("        /___/                           ");
+  script.Print("      ___           __         _    __  ");
+  script.Print("     / _ | ___  ___/ /______  (_)__/ /  ");
+  script.Print("    / __ |/ _ \/ _  / __/ _ \/ / _  /   ");
+  script.Print("   /_/ |_/_//_/\_,_/_/  \___/_/\_,_/    ");
+  script.Print("           __  __                       ");                      
+  script.Print("           \ \/ / __ __ __              ");                      
+  script.Print("            \  / _ \/ // /              ");            
+  script.Print("            /_/\___/\_,_/               ");
+  script.Print("                                        ");
+  script.Print("          __ __                         ");
+  script.Print("         / // /__ __  _____             ");
+  script.Print("        / _  / _ `/ |/ / -_)            ");
+  script.Print("       /_//_/\_,_/|___/\__/             "); 
+  script.Print("                                        ");
+  script.Print("           ___                          ");
+  script.Print("          / _ )___ ___ ___              ");
+  script.Print("         / _  / -_) -_) _ \             ");
+  script.Print("        /____/\__/\__/_//_/             ");
+  script.Print("                                        ");
+  script.Print("   ___       _                      __  ");
+  script.Print("  / _ \___  (_)__ ___  ___  ___ ___/ /  ");
+  script.Print(" / ___/ _ \/ (_-</ _ \/ _ \/ -_) _  /   ");
+  script.Print("/_/   \___/_/___/\___/_//_/\__/\_,_/    ");
 
   if OPTIONS.wipe_user_data:
     script.ShowProgress(0.1, 10)
