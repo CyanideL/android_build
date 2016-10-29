@@ -1809,8 +1809,8 @@ else
         common.ZipWriteStr(output_zip, "recovery/" + fn, data)
         system_items.Get("system/" + fn)
 
-      common.MakeRecoveryPatch(OPTIONS.target_tmp, output_sink,
-                               target_recovery, target_boot)
+#      common.MakeRecoveryPatch(OPTIONS.target_tmp, output_sink,
+#                               target_recovery, target_boot)
       script.DeleteFiles(["/system/recovery-from-boot.p",
                           "/system/etc/recovery.img",
                           "/system/etc/install-recovery.sh"])
